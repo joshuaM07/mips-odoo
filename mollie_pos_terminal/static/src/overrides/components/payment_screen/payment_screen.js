@@ -40,6 +40,17 @@ patch(PaymentScreen.prototype, {
         }
 
         return super._isOrderValid(...arguments)
-    }
+    },
 
+    async sendMollieStatusCheck(line) {
+        const payment_terminal = line.payment_method.payment_terminal;
+        line.set_payment_status("waiting");
+        await payment_terminal.send_mollie_status_check(
+            this.currentOrder,
+            line.cid
+        );
+        if (line.payment_status == 'waiting') {
+            line.set_payment_status("waitingCard");
+        }
+    }
 });

@@ -48,6 +48,15 @@ export class PaymentMollie extends PaymentInterface {
         }
     }
 
+    /**
+     * In some cases, websocket does not handle update about mollie webhook.
+     * e.g. One case we found is parallel order.
+     * This will check payment status in case webhook status update via bus is missed.
+     */
+    async send_mollie_status_check(order, cid) {
+        await this.handleMollieStatusResponse();
+    }
+
     set_most_recent_mollie_uid(id) {
         this.most_recent_mollie_uid = id;
     }

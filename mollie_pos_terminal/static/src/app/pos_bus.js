@@ -8,7 +8,7 @@ patch(PosBus.prototype, {
     dispatch(message) {
         super.dispatch(...arguments);
 
-        if (message.type === "MOLLIE_TERMINAL_RESPONSE" && message.payload === this.pos.config.id) {
+        if (message.type === "MOLLIE_TERMINAL_RESPONSE" && message.payload === this.pos.config.id && this.pos.getPendingPaymentLine("mollie")) {
             this.pos
                 .getPendingPaymentLine("mollie")
                 .payment_method.payment_terminal.handleMollieStatusResponse();
