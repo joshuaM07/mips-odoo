@@ -1,12 +1,7 @@
 # -*- coding: utf-8 -*-
 
-import logging
-
-from odoo import _, api, fields, models
+from odoo import _, fields, models
 from odoo.exceptions import UserError
-
-
-_logger = logging.getLogger(__name__)
 
 
 class AccountPaymentRegister(models.TransientModel):
@@ -18,7 +13,6 @@ class AccountPaymentRegister(models.TransientModel):
 
     def action_create_payments(self):
         payments = super().action_create_payments()
-
         # We assume there is one record
         if len(self) == 1 and self.is_mollie_refund:
             # TO-DO: check the case where amount is refunded in another currency or raise warning
@@ -33,11 +27,11 @@ class AccountPaymentRegister(models.TransientModel):
             if refund['status'] in ['pending', 'refunded'] and payments.get('res_id'):
                 description = refund['id']
                 payment_record = self.env['account.payment'].browse(payments.get('res_id'))
-                payment_record.write({'mollie_refund_reference': description})
 
                 if payment_record.reconciled_invoice_ids and payment_record.reconciled_invoice_ids.mollie_refund_reference:
                     description = "%s,%s" % (payment_record.reconciled_invoice_ids.mollie_refund_reference, description)
 
+                payment_record.write({'mollie_refund_reference': description})
                 payment_record.reconciled_invoice_ids.write({'mollie_refund_reference': refund['id']})
 
             return True

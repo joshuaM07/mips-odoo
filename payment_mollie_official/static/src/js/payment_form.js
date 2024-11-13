@@ -3,7 +3,7 @@
 import { _t } from "@web/core/l10n/translation";
 import { loadJS } from "@web/core/assets";
 import paymentForm from '@payment/js/payment_form';
-import QrDialog from '@payment_mollie_official/js/qr_dialog';
+import { QrDialog } from '@payment_mollie_official/js/qr_dialog';
 
 paymentForm.include({
 
@@ -207,17 +207,11 @@ paymentForm.include({
         );
         var qrImgSrc = $redirectForm.data('qrsrc');
         if (qrImgSrc) {
-            var dialog = new QrDialog(this, {
+            this.call("dialog", "add", QrDialog, {
                 qrImgSrc: qrImgSrc,
                 submitRedirectForm: this._super.bind(this, ...arguments),
-                size: 'small',
-                title: _t('Scan QR'),
-                renderFooter: false
             });
-            dialog.opened().then(() => {
-                this._enableButton();
-            });
-            dialog.open();
+            this._enableButton();
         } else {
             return this._super(...arguments);
         }

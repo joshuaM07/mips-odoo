@@ -15,7 +15,7 @@ class AccountMove(models.Model):
 
         for invoice in posted.filtered(lambda move: move.is_invoice()):
             payments = invoice.mapped('transaction_ids.mollie_reminder_payment_id')
-            move_lines = payments.line_ids.filtered(lambda line: line.account_type in ('asset_receivable', 'liability_payable') and not line.reconciled)
+            move_lines = payments.move_id.line_ids.filtered(lambda line: line.account_type in ('asset_receivable', 'liability_payable') and not line.reconciled)
             for line in move_lines:
                 invoice.js_assign_outstanding_line(line.id)
         return posted
@@ -43,22 +43,6 @@ class AccountMove(models.Model):
                 has_mollie_tx = True
             move.valid_for_mollie_refund = has_mollie_tx
 
-    def mollie_process_refund(self):
-        self.ensure_one()
-        payment_record, mollie_transactions = self._get_mollie_payment_data_for_refund()
-        if payment_record:
-            # Create payment record and post the payment
-            AccountPaymentRegister = self.env['account.payment.register'].with_context(active_ids=self.ids, active_model='account.move')
-            payment_obj = AccountPaymentRegister.create({
-                'journal_id': mollie_transactions.payment_id.journal_id.id,
-                'payment_method_id': mollie_transactions.payment_id.payment_method_id.id
-            })
-            payment_obj.action_create_payments()
-            # Create refund in mollie via API
-            refund = mollie_transactions.provider_id._api_mollie_refund(self.amount_total, self.currency_id, payment_record)
-            if refund['status'] == 'refunded':
-                self.mollie_refund_reference = refund['id']
-
     def _find_valid_mollie_transactions(self):
         self.ensure_one()
 
@@ -81,7 +65,6 @@ class AccountMove(models.Model):
         }
 
         payment_record, mollie_transactions = self._get_mollie_payment_data_for_refund()
-
         # We will not get `amountRemaining` key if payment is not paid (only authorized)
         if payment_record and payment_record.get('amountRemaining'):
             # TO-DO: check the case where amount is refunded in another currency or raise warning

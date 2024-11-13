@@ -22,16 +22,16 @@ class PaymentTransaction(models.Model):
     mollie_save_card = fields.Boolean()
     mollie_reminder_payment_id = fields.Many2one('account.payment', string="Mollie Reminder Payment", readonly=True)
 
-    def _process_notification_data(self, data):
+    def _process_notification_data(self, notification_data):
         """ Override of payment to process the transaction based on Mollie data.
 
         Note: self.ensure_one()
 
-        :param dict data: The feedback data sent by the provider
+        :param dict notification_data: The feedback notification data sent by the provider
         :return: None
         """
         if self.provider_code != 'mollie':
-            return super()._process_notification_data(data)
+            return super()._process_notification_data(notification_data)
 
         self._process_refund_transactions_status()
 
@@ -83,7 +83,7 @@ class PaymentTransaction(models.Model):
                 'ref': self.reference
             }
 
-    def _send_refund_request(self, amount_to_refund=None, create_refund_transaction=True):
+    def _send_refund_request(self, amount_to_refund=None):
         """ Override of payment to send a refund request to Authorize.
 
         Note: self.ensure_one()
@@ -93,15 +93,10 @@ class PaymentTransaction(models.Model):
         :return: The refund transaction if any
         :rtype: recordset of `payment.transaction`
         """
+        refund_tx = super()._send_refund_request(amount_to_refund=amount_to_refund)
         if self.provider_code != 'mollie':
-            return super()._send_refund_request(
-                amount_to_refund=amount_to_refund,
-                create_refund_transaction=create_refund_transaction,
-            )
+            return refund_tx
 
-        refund_tx = super()._send_refund_request(
-            amount_to_refund=amount_to_refund, create_refund_transaction=True
-        )
         payment_data = self.provider_id._api_mollie_get_payment_data(self.provider_reference, force_payment=True)
         refund_data = self.provider_id._api_mollie_refund(amount_to_refund, self.currency_id.name, payment_data.get('id'))
         refund_tx.provider_reference = refund_data.get('id')
@@ -125,21 +120,22 @@ class PaymentTransaction(models.Model):
                 # might paid with multiple payment method. So we need to payment data to check
                 # how payment is done.
                 mollie_payment = self.provider_id._api_mollie_get_payment_data(self.provider_reference)
-
                 # When payment is done via order API
                 if mollie_payment.get('resource') == 'order' and mollie_payment.get('_embedded'):
                     payment_list = mollie_payment['_embedded'].get('payments', [])
                     if len(payment_list):
                         mollie_payment = payment_list[0]
-
                 remainder_method_code = mollie_payment['details'].get('remainderMethod')
                 if remainder_method_code:  # if there is remainder amount
                     primary_journal = mollie_method.journal_id or self.provider_id.journal_id
+                    for odoo_method_code, mollie_method_code in const.PAYMENT_METHODS_MAPPING.items():
+                        if mollie_method_code == remainder_method_code:
+                            remainder_method_code = odoo_method_code
                     remainder_method = self.provider_id.payment_method_ids.filtered(lambda m: m.code == remainder_method_code)
                     remainder_journal = remainder_method.journal_id or self.provider_id.journal_id
 
                     reminder_mollie_method_payment_code = remainder_method._get_journal_method_code()
-                    remainder_payment_method_line = remainder_method.journal_id.inbound_payment_method_line_ids.filtered(lambda l: l.code == reminder_mollie_method_payment_code)
+                    remainder_payment_method_line = remainder_method.journal_id.inbound_payment_method_line_ids.filtered(lambda pm_line: pm_line.code == reminder_mollie_method_payment_code)
 
                     # if both journals are diffrent then we need to split the payment
                     if primary_journal != remainder_journal:
@@ -160,7 +156,7 @@ class PaymentTransaction(models.Model):
                             'payment_method_line_id': remainder_payment_method_line.id,
                             'payment_token_id': self.token_id.id,
                             'payment_transaction_id': self.id,
-                            'ref': self.reference,
+                            'memo': self.reference,
                         }
 
                         remainder_payment = self.env['account.payment'].create(remainder_create_values)
@@ -287,6 +283,7 @@ class PaymentTransaction(models.Model):
         # Add if transaction has save card option
         if self.mollie_save_card and not self.env.user.has_group('base.group_public'):  # for security
             user_sudo = self.env.user.sudo()
+            user_sudo._mollie_validate_customer_id(self.provider_id)    # check customer ID exist else delete it (we will generate new one)
             mollie_customer_id = user_sudo.mollie_customer_id
             if not mollie_customer_id:
                 customer_id_data = self.provider_id._api_mollie_create_customer_id()
@@ -310,7 +307,6 @@ class PaymentTransaction(models.Model):
             method_record = self.provider_id.payment_method_ids.filtered(lambda m: m.code == self.payment_method_id.code)
             if method_record.mollie_enable_qr_payment:
                 params['include'] = 'details.qrCode'
-
         return payment_data, params
 
     def _mollie_get_order_lines(self, order):
@@ -416,12 +412,9 @@ class PaymentTransaction(models.Model):
                 _logger.warning("Can not format customer phone number for mollie")
         return phone
 
-    def process_refund_transactions_status(self):
-        self._process_refund_transactions_status()
-
     def _process_refund_transactions_status(self):
         self.ensure_one()
-        refund_transactions = self.env['payment.transaction'].sudo().search([('source_transaction_id', 'in', self.ids), ('operation', '=', 'refund'), ('state', 'in', ['pending', 'draft'])])
+        refund_transactions = self.sudo().search([('source_transaction_id', 'in', self.ids), ('operation', '=', 'refund'), ('state', 'in', ['pending', 'draft'])])
         for transection in refund_transactions:
             if transection.provider_reference:
                 source_reference = transection.source_transaction_id.provider_reference

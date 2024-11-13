@@ -13,7 +13,7 @@ class AccountPaymentMethod(models.Model):
 
         method_codes = self.env['payment.provider'].sudo()._get_all_mollie_methods_codes()
         for mollie_method_code in method_codes:
-            res[f'mollie_{mollie_method_code}'] = {'mode': 'unique', 'domain': [('type', '=', 'bank')]}
+            res[f'mollie_{mollie_method_code}'] = {'mode': 'unique', 'type': ('bank',)}
         return res
 
 

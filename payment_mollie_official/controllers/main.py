@@ -28,7 +28,8 @@ class MolliePaymentPortal(PaymentPortal):
         }
         custom_create_values = custom_create_values or {}
         custom_create_values.update(mollie_custom_create_values)
-        return super()._create_transaction(provider_id, payment_method_id, token_id, amount, currency_id, partner_id, flow,
+        return super()._create_transaction(
+            provider_id, payment_method_id, token_id, amount, currency_id, partner_id, flow,
             tokenization_requested, landing_route, reference_prefix=reference_prefix, is_validation=is_validation,
             custom_create_values=custom_create_values, **kwargs
         )

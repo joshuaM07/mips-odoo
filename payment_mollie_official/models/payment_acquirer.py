@@ -1,13 +1,14 @@
 # -*- coding: utf-8 -*-
 
 import json
-import base64
 import logging
+import psycopg2
 import requests
 from werkzeug import urls
 
-from odoo import _, fields, models, service
+from odoo import _, fields, models, service, api, SUPERUSER_ID
 from odoo.exceptions import ValidationError
+from odoo.modules.registry import Registry
 
 
 _logger = logging.getLogger(__name__)
@@ -23,7 +24,32 @@ class PaymentProviderMollie(models.Model):
 
     mollie_use_components = fields.Boolean(string='Mollie Components', default=True)
     mollie_show_save_card = fields.Boolean(string='Single-Click payments')
+    mollie_debug_logging = fields.Boolean('Debug logging', help="Log requests in order to ease debugging")
 
+    def toggle_mollie_debug(self):
+        for provider in self:
+            provider.mollie_debug_logging = not provider.mollie_debug_logging
+
+    def _log_logging(self, env, message, function_name, path, provider_id):
+        if self.mollie_debug_logging:
+            self.env.flush_all()
+            db_name = self._cr.dbname
+            try:
+                with Registry(db_name).cursor() as cr:
+                    env = api.Environment(cr, SUPERUSER_ID, {})
+                    IrLogging = env['ir.logging']
+                    IrLogging.sudo().create({
+                        'name': 'Mollie Payments',
+                        'type': 'server',
+                        'level': 'DEBUG',
+                        'dbname': db_name,
+                        'message': message or 'N/A',
+                        'func': function_name or 'N/A',
+                        'path': path,
+                        'line': provider_id,
+                    })
+            except psycopg2.Error:
+                pass
     # ----------------
     # PAYMENT FEATURES
     # ----------------
@@ -69,7 +95,7 @@ class PaymentProviderMollie(models.Model):
 
         endpoint = f'/v2/{endpoint.strip("/")}'
         url = urls.url_join('https://api.mollie.com/', endpoint)
-        params = self._mollie_generate_querystring(params)
+        querystring_params = self._mollie_generate_querystring(params)
 
         # User agent strings used by mollie to find issues in integration
         odoo_version = service.common.exp_version()['server_version']
@@ -83,24 +109,34 @@ class PaymentProviderMollie(models.Model):
             "User-Agent": f'Odoo/{odoo_version} MollieOdoo/{mollie_extended_app_version}',
         }
 
-        error_msg, result = _("Could not establish the connection to the API."), False
+        error_msg, result, status_code = _("Could not establish the connection to the API."), False, None
+        json_data = None
         if data:
-            data = json.dumps(data)
+            json_data = json.dumps(data)
 
         try:
-            response = requests.request(method, url, params=params, data=data, headers=headers, timeout=60)
+            response = requests.request(method, url, params=querystring_params, data=json_data, headers=headers, timeout=60)
             if response.status_code == 204:
                 return True  # returned no content
             result = response.json()
             if response.status_code not in [200, 201]:  # doc reference https://docs.mollie.com/overview/handling-errors
                 error_msg = f"Error[{response.status_code}]: {result.get('title')} - {result.get('detail')}"
+                status_code = response.status_code
                 _logger.exception("Error from mollie: %s", result)
             response.raise_for_status()
         except requests.exceptions.RequestException:
             if silent_errors:
-                return response.json()
+                result = {'error': error_msg, 'status_code': status_code}
             else:
                 raise ValidationError("Mollie: " + error_msg)
+        finally:
+            if self.mollie_debug_logging:
+                message = str(json.dumps({
+                    'PARAMS': params,
+                    'DATA': data,
+                    'RESPONSE': result,
+                }, indent=4))
+                self._log_logging(self.env, message, method, url, self.id)
         return result
 
     def _api_mollie_get_active_payment_methods(self, extra_params=None, all_methods=None):
@@ -120,7 +156,7 @@ class PaymentProviderMollie(models.Model):
         if payemnt_api_methods and payemnt_api_methods.get('count'):
             for method in payemnt_api_methods['_embedded']['methods']:
                 result[method['id']] = method
-        return result or {}
+        return result
 
     def _api_mollie_create_payment_record(self, api_type, payment_data, params=None, silent_errors=False):
         """ Create the payment records on the mollie. It calls payment or order
@@ -176,8 +212,7 @@ class PaymentProviderMollie(models.Model):
         :rtype: dict
         """
         refund_data = {'amount': {'value': "%.2f" % amount, 'currency': currency}}
-        data = self._mollie_make_request(f'/payments/{payment_reference}/refunds', data=refund_data, method="POST")
-        return data
+        return self._mollie_make_request(f'/payments/{payment_reference}/refunds', data=refund_data, method="POST")
 
     def _api_mollie_refund_data(self, payment_reference, refund_reference):
         """ Get data for the refund from mollie.
@@ -212,14 +247,6 @@ class PaymentProviderMollie(models.Model):
             'nb_NO', 'sv_SE', 'fi_FI', 'da_DK',
             'is_IS', 'hu_HU', 'pl_PL', 'lv_LV',
             'lt_LT', 'en_GB']
-
-    def _mollie_fetch_image_by_url(self, image_url):
-        image_base64 = False
-        try:
-            image_base64 = base64.b64encode(requests.get(image_url).content)
-        except Exception:
-            _logger.warning('Can not import mollie image %s', image_url)
-        return image_base64
 
     def _mollie_generate_querystring(self, params):
         """ Mollie uses dictionaries in querystrings with square brackets like this

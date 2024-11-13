@@ -19,11 +19,11 @@
             <page name="brands" position="after">
                 <page string="Voucher Configuration" name="mollie_voucher_config" invisible="code != 'voucher' or context.get('provider_code') != 'mollie'">
                     <field name="mollie_voucher_ids">
-                        <tree editable="bottom">
+                        <list editable="bottom">
                             <field name="mollie_voucher_category"/>
                             <field name="category_ids" widget="many2many_tags"/>
                             <field name="product_ids" widget="many2many_tags"/>
-                        </tree>
+                        </list>
                     </field>
                 </page>
             </page>

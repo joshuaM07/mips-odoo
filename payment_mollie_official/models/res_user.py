@@ -14,5 +14,5 @@ class ResUsers(models.Model):
         customer_id = self.sudo().mollie_customer_id
         if customer_id:
             customer_data = provider._api_get_customer_data(customer_id, silent_errors=True)
-            if customer_data.get('status') == 410:    # customer ID deleted
+            if customer_data.get('status_code') == 410:    # customer ID deleted
                 self.mollie_customer_id = False

@@ -2,11 +2,11 @@
 
 {
     'name': 'Mollie Payments Extended',
-    'version': '17.0.0.4',
+    'version': '18.0.0.0',
     'category': 'eCommerce',
     'license': 'LGPL-3',
     'author': 'Mollie',
-    'maintainer': 'Applix',
+    'maintainer': 'Droggol Infotech Private Limited',
     'website': 'https://www.mollie.com/',
 
     'summary': 'Add extra features in mollie payment',

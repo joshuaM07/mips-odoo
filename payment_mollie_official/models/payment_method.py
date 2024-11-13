@@ -7,8 +7,14 @@ import logging
 from odoo.http import request
 from odoo import fields, models, Command, api
 from odoo.addons.payment_mollie_official import const
+from odoo.addons.payment import utils as payment_utils
+from odoo.tools.translate import LazyTranslate
+from odoo.addons.payment.const import REPORT_REASONS_MAPPING
 
 _logger = logging.getLogger(__name__)
+_lt = LazyTranslate(__name__, default_lang='en_US')
+
+REPORT_REASONS_MAPPING.update({'incompatible_by_mollie': _lt("incompatible by mollie")})
 
 
 class PaymentMethod(models.Model):
@@ -94,7 +100,7 @@ class PaymentMethod(models.Model):
 
     def _get_compatible_payment_methods(
         self, provider_ids, partner_id, currency_id=None, force_tokenization=False,
-        is_express_checkout=False, **kwargs
+        is_express_checkout=False, report=None, **kwargs
     ):
         """ Search and return the payment methods matching the compatibility criteria.
 
@@ -107,7 +113,7 @@ class PaymentMethod(models.Model):
 
         result_pms = super()._get_compatible_payment_methods(
             provider_ids, partner_id, currency_id=currency_id, force_tokenization=force_tokenization,
-            is_express_checkout=is_express_checkout, **kwargs
+            is_express_checkout=is_express_checkout, report=report, **kwargs
         )
 
         if not provider_ids:
@@ -174,11 +180,20 @@ class PaymentMethod(models.Model):
                 if mollie_method:
                     issuers_codes = list(map(lambda issuer: issuer['id'], issuers))
                     mollie_issuers[mollie_method[0].id] = mollie_method[0].brand_ids.filtered(lambda brand: brand.active and brand.code in issuers_codes).ids  # always use first method, didn't occuer any case to get multiple methods but handle it
-
+        payment_utils.add_to_report(
+            report,
+            mollie_result_pms - mollie_allowed_methods,
+            available=False,
+            reason=REPORT_REASONS_MAPPING['incompatible_by_mollie'],
+        )
+        payment_utils.add_to_report(
+            report,
+            mollie_allowed_methods - mollie_result_pms,
+        )
         return (non_mollie_pms | mollie_allowed_methods).with_context(mollie_issuers=mollie_issuers)
 
     def _get_mollie_method_supported_issuers(self):
-        mollie_issuers = self.env.context.get('mollie_issuers', [])
+        mollie_issuers = self.env.context.get('mollie_issuers', {})
         if mollie_issuers.get(self.id):
             return self.browse(mollie_issuers[self.id])
         return []
@@ -216,7 +231,7 @@ class PaymentMethod(models.Model):
             method_info = mollie_methods_data[method]
             self.create({
                 'name': method_info['description'],
-                'code': method_info['id'],
+                'code': method,
                 'active': False,
                 'image': self._mollie_fetch_image_by_url(method_info.get('image', {}).get('size2x')),
             })

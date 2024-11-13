@@ -19,6 +19,7 @@
                     </b>
                 </small>
                 <field name="mollie_show_save_card" />
+                <field name="mollie_debug_logging" invisible="1"/>
             </field>
 
             <a name="action_view_payment_methods" position="attributes">
@@ -30,20 +31,27 @@
                     <i class="fa fa-refresh o_button_icon"/> Sync Mollie Methods
                 </a>
             </a>
+            <xpath expr="//div[hasclass('oe_button_box')]" position="inside">
+                <button name="toggle_mollie_debug"
+                    invisible="mollie_debug_logging and code == 'mollie'"
+                    class="oe_stat_button"
+                    groups="base.group_no_one"
+                    type="object" icon="fa-code">
+                    <div class="o_stat_info o_field_widget">
+                        <span class="o_stat_text text-danger">No debug</span>
+                    </div>
+                </button>
+                <button name="toggle_mollie_debug"
+                    invisible="not mollie_debug_logging and code == 'mollie'"
+                    class="oe_stat_button"
+                    groups="base.group_no_one"
+                    type="object" icon="fa-code">
+                    <div class="o_stat_info o_field_widget">
+                        <span class="text-success">Debug requests</span>
+                    </div>
+                </button>
+            </xpath>
         </field>
     </record>
-
-    <!-- <record id="payment_method_tree" model="ir.ui.view">
-        <field name="name">payment.method.form.inherit.mollie</field>
-        <field name="model">payment.method</field>
-        <field name="inherit_id" ref="payment.payment_method_tree"/>
-        <field name="arch" type="xml">
-            <field name="sequence"  position="before">
-                <header>
-                    <button string="Sync Mollie Methods" type="object" invisible="context.get('provider_code') != 'mollie'" name="action_sync_mollie_methods" display="always"/>
-                </header>
-            </field>
-        </field>
-    </record> -->
 
 </odoo>
