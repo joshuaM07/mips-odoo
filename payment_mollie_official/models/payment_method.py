@@ -148,7 +148,7 @@ class PaymentMethod(models.Model):
             # we will not use order api if it is downpayment also we will user downpayment amount
             if request and request.params.get('downpayment') == 'true':
                 extra_params['amount'] = {'value': "%.2f" % order_sudo._get_prepayment_required_amount(), 'currency': order_sudo.currency_id.name}
-            else:
+            elif all(line.product_uom_qty % 1 == 0 for line in order_sudo.order_line):
                 extra_params['resource'] = 'orders'
 
         if not kwargs.get('sale_order_id') and request and request.params.get('invoice_id'):
@@ -205,7 +205,8 @@ class PaymentMethod(models.Model):
             # TODO: map word creditcard with PAYMENT_METHODS_MAPPING
             if self.code == 'card' and (provider_sudo.mollie_use_components or provider_sudo.mollie_show_save_card):    # inline card
                 inline_form_xml_id = 'payment_mollie_official.mollie_creditcard_component'
-            elif self.mollie_has_issuers:  # Issuers
+            # elif self.mollie_has_issuers:  # Issuers
+            elif self.mollie_has_issuers and self.code != 'ideal':  # Issuers is removed for ideal as mollie does not support issuers anymore
                 inline_form_xml_id = 'payment_mollie_official.mollie_issuers_list'
         return inline_form_xml_id
 
@@ -250,14 +251,15 @@ class PaymentMethod(models.Model):
         for method_code, method_data in mollie_methods_data.items():
             issuers_data = method_data.get('issuers', [])
             mollie_method = all_methods.filtered(lambda m: m.code == method_code)
+
+            # remove the issuer for ideal as mollie removed the issuers support
+            if mollie_method.code == 'ideal':
+                mollie_method.brand_ids.write({'primary_payment_method_id': False})
+                mollie_method.mollie_has_issuers = False
+                continue
+
             if issuers_data and mollie_method:
                 self._generate_issuers(issuers_data, mollie_method)
-
-            # remove the issuer if it removed from mollie (iban2 removed the issuers support)
-            mollie_supported_issuer_codes = [issuer_info['id'] for issuer_info in issuers_data]
-            issuers_to_delete = mollie_method.brand_ids.filtered(lambda brand: brand.code not in mollie_supported_issuer_codes)
-            if issuers_to_delete:
-                issuers_to_delete.unlink()
 
             mollie_method.mollie_has_issuers = len(mollie_method.brand_ids) > 1
 

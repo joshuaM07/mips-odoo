@@ -11,6 +11,12 @@ class PosPaymentMethod(models.Model):
     mollie_latest_response = fields.Json('History', default={})
     mollie_payment_default_partner = fields.Many2one('res.partner')
 
+    @api.model
+    def _load_pos_data_fields(self, config_id):
+        result = super()._load_pos_data_fields(config_id)
+        result += ['mollie_payment_default_partner']
+        return result
+
     def _get_payment_terminal_selection(self):
         return super(PosPaymentMethod, self)._get_payment_terminal_selection() + [('mollie', 'Mollie')]
 

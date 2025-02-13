@@ -21,6 +21,8 @@ class PaymentTransaction(models.Model):
     mollie_card_token = fields.Char()
     mollie_save_card = fields.Boolean()
     mollie_reminder_payment_id = fields.Many2one('account.payment', string="Mollie Reminder Payment", readonly=True)
+    mollie_origin_payment_reference = fields.Char()
+    mollie_payment_shipment_reference = fields.Char()
 
     def _process_notification_data(self, notification_data):
         """ Override of payment to process the transaction based on Mollie data.
@@ -41,9 +43,13 @@ class PaymentTransaction(models.Model):
         provider_reference = self.provider_reference
         mollie_payment = self.provider_id._api_mollie_get_payment_data(provider_reference, force_payment=True)
         payment_status = mollie_payment.get('status')
+
+        if mollie_payment.get('amountCaptured') and float(mollie_payment['amountCaptured']['value']) > 0.0:
+            self._process_capture_transactions_status(mollie_payment['id'])
+            if payment_status != 'paid' or payment_status == 'paid' and self.state == 'done':
+                return
+
         if payment_status == 'paid':
-            if mollie_payment.get('amountCaptured') and float(mollie_payment['amountCaptured']['value']) < self.amount:
-                self.amount = mollie_payment['amountCaptured']['value']
             self._set_done()
         elif payment_status == 'pending':
             self._set_pending()
@@ -102,6 +108,57 @@ class PaymentTransaction(models.Model):
         refund_tx.provider_reference = refund_data.get('id')
 
         return refund_tx
+
+    def _get_tx_from_notification_data(self, provider_code, notification_data):
+        tx = super()._get_tx_from_notification_data(provider_code, notification_data)
+        if provider_code != 'mollie' or len(tx) == 1:
+            return tx
+        if notification_data.get('id'):
+            tx = self.search(
+                [('provider_reference', '=', notification_data.get('id')), ('provider_code', '=', 'mollie')]
+            )
+            if not tx:
+                raise ValidationError("Mollie: " + _(
+                    "No transaction found matching provider reference %s.", notification_data.get('id')
+                ))
+        return tx
+
+    def _send_void_request(self, amount_to_void=None):
+        """ transaction to void the payment
+        cancel remaining quantity
+        check context mollie_amount: to check amount_to_void was calculated with mollie or not
+        :param float amount_to_void: The amount to be voided.
+        :return: The created void child transaction, if any.
+        :rtype: payment.transaction
+        """
+        child_void_tx = super()._send_void_request(amount_to_void=amount_to_void)
+        if self.provider_code != 'mollie':
+            return child_void_tx
+
+        data = self.provider_id._api_mollie_get_payment_data(self.provider_reference)
+        cancel_lines = []
+        cancelable_amount = 0
+        if data and data.get('lines'):
+            for mollie_line in data.get('lines'):
+                if mollie_line.get('status') == 'canceled' or not mollie_line.get('isCancelable'):
+                    continue
+                mollie_line_metadata = mollie_line.get('metadata')
+                if mollie_line_metadata:
+                    order_line = self.sale_order_ids.order_line.filtered(lambda line: line.id == mollie_line_metadata.get('line_id'))
+                    if order_line:
+                        cancelable_amount += order_line.price_reduce_taxinc * mollie_line['cancelableQuantity']
+                        cancel_lines.append({
+                            'id': mollie_line['id'],
+                        })
+
+        if cancel_lines and cancelable_amount:
+            self.provider_id._api_mollie_cancel_remaining_shipment(self.provider_reference, {'lines': cancel_lines})
+
+        if not child_void_tx and cancelable_amount:
+            child_void_tx = self._create_child_transaction(cancelable_amount)
+
+        child_void_tx._set_canceled()
+        return child_void_tx
 
     def _create_payment(self, **extra_create_values):
         """ Overridden method to create reminder payment for vouchers."""
@@ -205,8 +262,11 @@ class PaymentTransaction(models.Model):
         result = None
 
         # Order API (use if sale orders are present). Also qr code is only supported by Payment API
+        # Any quantity value is float use payment API
         # we do float_compare as partial payments is now possible.
-        if (not method_record.mollie_enable_qr_payment) and 'sale_order_ids' in self._fields and len(self.sale_order_ids) == 1 and float_compare(self.sale_order_ids.amount_total, self.amount, precision_digits=2) == 0:
+        if (not method_record.mollie_enable_qr_payment) and 'sale_order_ids' in self._fields and len(self.sale_order_ids) == 1 and \
+                float_compare(self.sale_order_ids.amount_total, self.amount, precision_digits=2) == 0 and \
+                all(line.product_uom_qty % 1 == 0 for line in self.sale_order_ids.order_line):
             # Order API
             result = self._mollie_create_payment_record('order')
         else:  # Payment API
@@ -427,3 +487,39 @@ class PaymentTransaction(models.Model):
                         transection._set_done()
                     elif refund_data.get('status') == 'failed':
                         self._set_canceled("Mollie: " + _("Mollie: failed due to status: %s", refund_data.get('status')))
+
+    def _process_capture_transactions_status(self, payment_reference):
+        capture_data = self.provider_id._api_mollie_get_capture_data(payment_reference)
+        if capture_data.get('count'):
+            for capture in capture_data['_embedded']['captures']:
+                capture_tx = self.child_transaction_ids.filtered(lambda ctx: ctx.provider_reference == capture['id'])
+                if not capture_tx:
+                    capture_tx = self._create_child_transaction(
+                        capture['amount']['value'],
+                        provider_reference=capture.get('id'),
+                        mollie_origin_payment_reference=capture.get('paymentId'),
+                        mollie_payment_shipment_reference=capture.get('shipmentId'))
+                if capture_tx:
+                    if capture['status'] == 'succeeded':
+                        capture_tx._set_done()
+                    elif capture['status'] == 'failed':
+                        capture_tx._set_canceled()
+                    elif capture['status'] == 'pending':
+                        capture_tx._set_pending()
+
+    def _cron_mollie_capture_transaction(self):
+        domain = [
+            ('provider_id.mollie_auto_capture', '!=', False),
+            ('provider_id.code', '=', 'mollie'),
+            ('provider_reference', '!=', False),
+            ('state', '=', 'authorized')
+        ]
+        transactions = self.search(domain, limit=10)
+        if transactions:
+            capture_wizard_data = transactions.action_capture()
+            if capture_wizard_data.get('context'):
+                capture_wizard = self.env[capture_wizard_data['res_model']].with_context(capture_wizard_data['context']).create({})
+                if capture_wizard.mollie_amount_to_capture:
+                    capture_wizard.action_mollie_capture()
+                else:
+                    capture_wizard.unlink()

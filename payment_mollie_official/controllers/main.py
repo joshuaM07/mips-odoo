@@ -13,7 +13,10 @@ class MolliePaymentPortal(PaymentPortal):
         if kwargs.get('provider_id'):
             provider_id = request.env['payment.provider'].sudo().browse(int(kwargs['provider_id']))
             if provider_id.code == 'mollie':
-                additional_allowed_keys += ('mollie_card_token', 'mollie_payment_issuer', 'mollie_save_card')
+                if isinstance(additional_allowed_keys, tuple):
+                    additional_allowed_keys += ('mollie_card_token', 'mollie_payment_issuer', 'mollie_save_card')
+                if isinstance(additional_allowed_keys, set):
+                    additional_allowed_keys.update(['mollie_card_token', 'mollie_payment_issuer', 'mollie_save_card'])
         super(MolliePaymentPortal, MolliePaymentPortal)._validate_transaction_kwargs(kwargs, additional_allowed_keys=additional_allowed_keys)
 
     def _create_transaction(

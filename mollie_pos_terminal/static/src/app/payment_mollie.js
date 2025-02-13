@@ -107,7 +107,7 @@ export class PaymentMollie extends PaymentInterface {
         if (order.get_selected_paymentline().amount < 0) {
             let refundOrderId = false;
             for (let line of order.lines) {
-                refundOrderId = line?.refunded_orderline_id?._raw?.order_id || false;
+                refundOrderId = line?.refunded_orderline_id?.raw?.order_id || false;
                 if (refundOrderId) {
                     break;
                 }

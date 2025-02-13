@@ -6,7 +6,7 @@ import psycopg2
 import requests
 from werkzeug import urls
 
-from odoo import _, fields, models, service, api, SUPERUSER_ID
+from odoo import _, fields, models, service, api, SUPERUSER_ID, Command
 from odoo.exceptions import ValidationError
 from odoo.modules.registry import Registry
 
@@ -25,6 +25,9 @@ class PaymentProviderMollie(models.Model):
     mollie_use_components = fields.Boolean(string='Mollie Components', default=True)
     mollie_show_save_card = fields.Boolean(string='Single-Click payments')
     mollie_debug_logging = fields.Boolean('Debug logging', help="Log requests in order to ease debugging")
+    mollie_auto_capture = fields.Boolean('Auto Capture')
+    mollie_set_delivery_line_qty = fields.Boolean('Set Delivery Line Qty')
+    mollie_automation_action_id = fields.Many2one('base.automation', string='Automation Action')
 
     def toggle_mollie_debug(self):
         for provider in self:
@@ -50,6 +53,39 @@ class PaymentProviderMollie(models.Model):
                     })
             except psycopg2.Error:
                 pass
+
+    # -----------------
+    # AUTOMATION ACTION
+    # -----------------
+
+    def create_delivered_qty_action(self):
+        if self.env.ref('base.module_stock').state != 'installed':
+            raise ValidationError('Install "Inventory" module for automatically set delivered quantity.')
+        picking_model_id = self.env.ref('stock.model_stock_picking').id
+        self.mollie_automation_action_id = self.env['base.automation'].create({
+            'name': 'Set Shipping line Delivered Quantity',
+            'active': True,
+            'trigger': 'on_create_or_write',
+            'filter_pre_domain': "['&', ('picking_type_code', '=', 'outgoing'), ('state', '!=', 'done')]",
+            'filter_domain': "['&', ('picking_type_code', '=', 'outgoing'), ('state', '=', 'done')]",
+            'model_id': picking_model_id,
+            'action_server_ids': [Command.create({
+                'name': 'Test',
+                'state': 'code',
+                'model_id': picking_model_id,
+                'code': """
+for transfer in records:
+    delivery_line = transfer.sale_id.order_line.filtered(lambda line:line.is_delivery and not line.qty_delivered)
+    if delivery_line and delivery_line.product_id.service_type == 'manual':
+        delivery_line.write({'qty_delivered': 1})
+"""
+            })]
+        }).id
+
+    def unlink_delivered_qty_action(self):
+        if self.mollie_automation_action_id:
+            self.mollie_automation_action_id.unlink()
+
     # ----------------
     # PAYMENT FEATURES
     # ----------------
@@ -59,7 +95,7 @@ class PaymentProviderMollie(models.Model):
         super()._compute_feature_support_fields()
         self.filtered(lambda p: p.code == 'mollie').update({
             'support_refund': 'partial',
-            'support_manual_capture': 'partial'
+            'support_manual_capture': 'partial',
         })
 
     # --------------
@@ -229,6 +265,33 @@ class PaymentProviderMollie(models.Model):
         :rtype: dict
         """
         return self._mollie_make_request(f'/customers/{customer_id}', method="GET", silent_errors=silent_errors)
+
+    def _api_mollie_get_capture_data(self, payment_reference):
+        """ Fetch capture records based `payment_reference`. It is used
+        to verify child transaction's state after capture the payment.
+        :param str payment_reference: payment reference
+        :return: details of capture records
+        :rtype: dict
+        """
+        return self._mollie_make_request(f'/payments/{payment_reference}/captures', method="GET")
+
+    def _api_mollie_sync_shipment(self, order_reference, shipment_data):
+        """ Capture amount from mollie
+        update delivered quantity
+        :param str order_reference: order record reference
+        :param dict payment_data: delivered quantity data
+
+        """
+        return self._mollie_make_request(f'/orders/{order_reference}/shipments', data=shipment_data, method="POST", silent_errors=True)
+
+    def _api_mollie_cancel_remaining_shipment(self, order_reference, data):
+        """ cancel remaining shipment on the mollie.
+        :param str order_reference: order record reference
+        :param dict data: shipment data for cancel.
+        :return: details of Order
+        :rtype: dict
+        """
+        return self._mollie_make_request(f'/orders/{order_reference}/lines', data=data, method="DELETE", silent_errors=True)
 
     # -------------------------
     # Helper methods for mollie

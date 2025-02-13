@@ -2,10 +2,18 @@
 
 import { _t } from "@web/core/l10n/translation";
 import { PaymentScreen } from "@point_of_sale/app/screens/payment_screen/payment_screen";
+import { PaymentScreenPaymentLines } from "@point_of_sale/app/screens/payment_screen/payment_lines/payment_lines";
 import { patch } from "@web/core/utils/patch";
 import { onMounted } from "@odoo/owl";
 import { AlertDialog, ConfirmationDialog } from "@web/core/confirmation_dialog/confirmation_dialog";
 import { markup } from "@odoo/owl";
+
+patch(PaymentScreenPaymentLines, {
+    props: {
+        ...PaymentScreenPaymentLines.props,
+        sendMollieStatusCheck: { type: Function, optional: true },
+    },
+});
 
 patch(PaymentScreen.prototype, {
     setup() {
@@ -34,12 +42,11 @@ patch(PaymentScreen.prototype, {
         );
 
         mollieLine = this.currentOrder.payment_ids[0];
-
         if (mollieLine
             && mollieLine.payment_method_id.split_transactions
             && mollieLine.payment_method_id.mollie_payment_default_partner
             && !this.currentOrder.get_partner()) {
-            var partner = this.pos.db.get_partner_by_id(mollieLine.payment_method_id.mollie_payment_default_partner[0]);
+            var partner = mollieLine.payment_method_id.mollie_payment_default_partner['id']
             this.currentOrder.set_partner(partner);
         }
 
@@ -61,7 +68,7 @@ patch(PaymentScreen.prototype, {
     async addNewPaymentLine(paymentMethod) {
         let refundOrderId = false;
         for (let line of this.currentOrder.lines) {
-            refundOrderId = line?.refunded_orderline_id?._raw?.order_id || false;
+            refundOrderId = line?.refunded_orderline_id?.raw?.order_id || false;
             if (refundOrderId) {
                 break;
             }
