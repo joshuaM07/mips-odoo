@@ -1,0 +1,46 @@
+{
+  "description": "On any API Call to generate a payment iFrame (touchpoint = 'web'), an HTML block is sent back. The merchant just needs to echo (print) this HTML without modify. The iFrame will appear within the HTML.\n\nOn any API Call to get the payment link to be use in a Webview (touchpoint = 'native_app'), a link is sent back. The merchant just needs to use the link to load the Webview.\n\nThe payment module loaded will contain all data needed to capture the means of payments.",
+  "type": "object",
+  "x-examples": {
+    "example-1": {
+      "original_message": "{\"id_merchant\":\"JxdgQ1rvLJUlOAJw8TlD9cm6WhiJaQ2s\",\"id_entity\":\"OGqh2UbkuOjMgDartRtGg7EOpqKBj0OJ\",\"operator_email\":\"test@test.mu\",\"operator_id\":\"FuO2nWKkkrVdQC2xXKMnJhLnW8JQHIDy\",\"remote_user_password\":\"YABX9EepzEFxzNt0RDEfwjRbx2gHwAhZ96FrHBMgjxzwlLR8YAzdvzXegGmBONoTQ49Cpv53IPxELDBNiRqAa5eMVnkjPUo51xHa7B4QBS8KwmH1QWCHJdIQNqYUTsveU0WzhkZDiQPntN61izHOyVz5fhT5SyeQnkmBFDxNunNoOzBcrszhkSPIK9k3SHGpklzwpicBoUJUMl32fil2ODCklsZ3luUjZyTuiktUlpmyTvzmtpYp5gyqsbzf3iem\",\"request_mode\":\"simple\",\"touchpoint\":\"web\",\"order\":{\"id_order\":\"id_order545433\",\"amount\":55,\"currency\":\"MUR\"},\"iframe_behavior\":{\"custom_url\":\"www.expand-technology.com\",\"height\":508,\"width\":450,\"language\":\"EN\"},\"additional_param\":[{\"param_name\":\"eyes\",\"param_value\":\"blue\"},{\"param_name\":\"hair\",\"param_value\":\"black\"}]}",
+      "answer": {
+        "operation_status": "success",
+        "payment_iframe": "<script type=\"text/javascript\" src=\"https://go.mips.mu/gomips.js\"></script><iframe style=\"width:450px!important;height:508px!important;\" width=\"450px\" height=\"508px\" frameborder=\"no\" scrolling=\"0\" src=\"https://go.mips.mu/mipsit.php?c=aWY5Zm0yYmE1MVhSUXkyWVZEWWhGb01uK1orQ3h3Skl1cW1ORndCaXo5cy9tOHhmODBRL2ZPc2ljZ00xWkY4em9CeTduSE4rTHNLWlpSTkNXL1dmRS9UQjJLT3loYTYzdjVQbCt2YWxSc2RYclMrREc0ZEVzODI2MXVneUVxNnNpZjFyN1UyblFUM1N6OERyR3NTNkhrdU9jbnFqU001SVVwcWhPSlIxd1J1VjFvKzB2aEJEbUVIalluQjFZeEx4b0wrbWROMlJiTk1zcXdnVUllWHU5NldNUi9udmlHakpLRklFWlQyVmtReEhhODlidjZzZzlONG10Uk9LSno3TzdGNW1iTVBTeW5DaVVOMU10bUk0T2s3UWh6NGNqZzIxT3dhNXpUcHRzY1VZQXBZaVQyZ0VOTERLN2h3VTByUlpSOTZuaUxGZzhBbEJzYy9FV0d4K05Rd0liWGJieTZUZWFseitndlduV1Z1NWlkQjhpcS8zTFp1RDA1ZGpKZytENzFMeXl1ZDNvQ0xLdmVGVTViQndKQVlDVTlTWFRNQWdET2tvUnprbkFRbzY0Q3BPMVRRc0lNcHBxYjcyYy9WN29lMjVxVVJ1S1NGTzhiQ0ZzRUl1aWc9PQ==&smid=JxdgQ1rvLJUlOAJw8TlD9cm6WhiJaQ2s\"></iframe>"
+      }
+    }
+  },
+  "properties": {
+    "original_message": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Contain the exact API Call that the merchant sent."
+    },
+    "answer": {
+      "type": "object",
+      "required": [
+        "operation_status"
+      ],
+      "properties": {
+        "operation_status": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Contain the status do not contain the payment status, it is only the status of the API Call",
+          "enum": [
+            "success",
+            "fail"
+          ],
+          "example": "success"
+        },
+        "payment_zone_data": {
+          "type": "string",
+          "description": "For 'web' touchpoint, this parameter will contain the HTML of the iFrame to show on the payment page.\n\nFor 'native_app' touchpoint, this parameter will contain the link to be use in the Webview."
+        }
+      }
+    }
+  },
+  "required": [
+    "original_message",
+    "answer"
+  ]
+}

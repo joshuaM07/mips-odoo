@@ -1,0 +1,28 @@
+{
+  "title": "Payer",
+  "type": "object",
+  "properties": {
+    "id_payer": {
+      "type": "string"
+    },
+    "account_numbers": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "string"
+      }
+    },
+    "name": {
+      "type": "string"
+    },
+    "surname": {
+      "type": "string"
+    },
+    "tel": {
+      "type": "string"
+    },
+    "": {
+      "type": "string"
+    }
+  }
+}

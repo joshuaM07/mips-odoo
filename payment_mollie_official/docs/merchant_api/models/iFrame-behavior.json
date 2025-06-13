@@ -1,0 +1,44 @@
+{
+  "title": "iFrame behavior",
+  "type": "object",
+  "x-tags": [
+    "look"
+  ],
+  "description": "The merchant can specify here some custom look behaviors for the generated iFrame.\n\nImportant: custom_redirection_url is NOT the callback URL after a successful payment. The callback is done by MiPS to the IMN URL the merchant will provide us. The redirection url acts only as a success page for the user.\n\nAll these options are optional.",
+  "examples": [
+    {
+      "height": 400,
+      "width": 350,
+      "custom_redirection_url": "www.example.com",
+      "language": "EN"
+    }
+  ],
+  "properties": {
+    "height": {
+      "type": "integer",
+      "example": 400,
+      "description": "Height of the iframe in pixels"
+    },
+    "width": {
+      "type": "integer",
+      "example": 350,
+      "description": "Width of the iframe in pixels"
+    },
+    "custom_redirection_url": {
+      "type": "string",
+      "format": "uri",
+      "description": "The redirection page after a successful payment. A fail payment does not redirect. The try again option is displayed within the iframe"
+    },
+    "language": {
+      "type": "string",
+      "enum": [
+        "EN",
+        "FR"
+      ],
+      "example": "EN",
+      "minLength": 2,
+      "maxLength": 2,
+      "description": "Display language of the iFrame"
+    }
+  }
+}

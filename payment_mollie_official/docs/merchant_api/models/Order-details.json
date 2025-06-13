@@ -1,0 +1,47 @@
+{
+  "title": "Order details",
+  "type": "object",
+  "properties": {
+    "id_order": {
+      "type": "string"
+    },
+    "amount": {
+      "type": "number"
+    },
+    "currency": {
+      "type": "string",
+      "enum": [
+        "MUR",
+        "USD",
+        "EUR",
+        "ZAR",
+        "GBP"
+      ]
+    },
+    "order_status": {
+      "type": "string",
+      "enum": [
+        "success",
+        "fail",
+        "waiting",
+        "expired"
+      ]
+    },
+    "last_transaction_date": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "order_link": {
+      "type": "string"
+    },
+    "order_qrcode": {
+      "type": "string",
+      "description": "QRCode is base64 Encode. The image is in PNG. You must add \"data:image/png;base64, \" in the 'src' parameter of the 'img' tag before for the image to show"
+    },
+    "next_payment_date": {
+      "type": "string",
+      "format": "date",
+      "description": "Only available with the instruction 'get_next_payment_date'"
+    }
+  }
+}

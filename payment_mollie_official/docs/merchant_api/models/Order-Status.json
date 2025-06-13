@@ -1,0 +1,22 @@
+{
+  "title": "Order Status",
+  "type": "object",
+  "x-tags": [
+    "order",
+    "status",
+    "IMN"
+  ],
+  "properties": {
+    "id_order": {
+      "type": "string"
+    },
+    "order_status": {
+      "type": "string",
+      "enum": [
+        "success",
+        "fail",
+        "error"
+      ]
+    }
+  }
+}

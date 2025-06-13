@@ -1,0 +1,165 @@
+{
+  "title": "IMN decrypted callback",
+  "type": "object",
+  "description": "This is received by the merchant after decrypting the crypted Instant Merchant notification callback.\n\nThis answer contains all needed data for the merchant to update his databases and process the operations after a successful payment (send invoices, updates orders, etc.)\n\nDepending on the type of payment needed (one off, membership, odrp, etc.) the answer contains the relevant datas.",
+  "examples": [],
+  "properties": {
+    "amount": {
+      "type": "string",
+      "description": "Amount in cents"
+    },
+    "currency": {
+      "type": "string"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "success",
+        "fail"
+      ],
+      "example": "success"
+    },
+    "checksum": {
+      "type": "string",
+      "description": "HASH of all parameters in the order of apearence"
+    },
+    "id_order": {
+      "type": "string"
+    },
+    "transaction_id": {
+      "type": "string"
+    },
+    "type": {
+      "type": "string",
+      "description": "Payment method"
+    },
+    "reference": {
+      "type": "string",
+      "description": "reference number for differed payment mode"
+    },
+    "payment_method": {
+      "type": "string",
+      "description": "Payment method."
+    },
+    "additional_param": {
+      "type": "string",
+      "description": "Additionnal parameter that has been sent when loading the iframe"
+    },
+    "reason_fail": {
+      "type": "string",
+      "description": "only for fail payment"
+    },
+    "token": {
+      "$ref": "./Token.json"
+    },
+    "card_details": {
+      "type": "object",
+      "description": "Only if payment_method is equal to card",
+      "properties": {
+        "masked_card_number": {
+          "type": "string",
+          "example": "123456xxxxxx1234",
+          "description": "Masked Card number"
+        },
+        "expiry_date": {
+          "type": "string",
+          "example": "06/22",
+          "default": "mm/yy"
+        },
+        "card_brand": {
+          "type": "string",
+          "x-stoplight": {
+            "id": "whj5gutzjrffc"
+          }
+        }
+      }
+    },
+    "transaction_details": {
+      "type": "object",
+      "x-stoplight": {
+        "id": "iaul9rhu6djhh"
+      },
+      "description": "Only available if it is a card POS payment",
+      "properties": {
+        "APPROVAL_CODE": {
+          "type": "string",
+          "x-stoplight": {
+            "id": "h2g46iw6ggpmo"
+          }
+        },
+        "MID": {
+          "type": "string",
+          "x-stoplight": {
+            "id": "3opcx5wzjgvpr"
+          }
+        },
+        "TID": {
+          "type": "string",
+          "x-stoplight": {
+            "id": "wzn6t5vpsvmsp"
+          }
+        },
+        "TVR": {
+          "type": "string",
+          "x-stoplight": {
+            "id": "64txzbeunk3ff"
+          }
+        },
+        "TSI": {
+          "type": "string",
+          "x-stoplight": {
+            "id": "pract6hg3lrmy"
+          }
+        },
+        "RECEIPT_NO": {
+          "type": "string",
+          "x-stoplight": {
+            "id": "m8ke55q5echvg"
+          }
+        },
+        "AID": {
+          "type": "string",
+          "x-stoplight": {
+            "id": "g4ujzrm9balc2"
+          }
+        },
+        "APP_NAME": {
+          "type": "string",
+          "x-stoplight": {
+            "id": "tnxr5752sd4ci"
+          }
+        },
+        "NAME_ON_CARD": {
+          "type": "string",
+          "x-stoplight": {
+            "id": "k1y1qa3vgwurk"
+          }
+        },
+        "APPL_VERSION": {
+          "type": "string",
+          "x-stoplight": {
+            "id": "wx4dfju8mnxae"
+          }
+        },
+        "AC_INFO": {
+          "type": "string",
+          "x-stoplight": {
+            "id": "4o8p8gm6d4sv5"
+          }
+        },
+        "AC": {
+          "type": "string",
+          "x-stoplight": {
+            "id": "d5rjsibisiwa8"
+          }
+        },
+        "PAN_SEQ_NUMBER": {
+          "type": "string",
+          "x-stoplight": {
+            "id": "ktk0bezgjhjuc"
+          }
+        }
+      }
+    }
+  }
+}

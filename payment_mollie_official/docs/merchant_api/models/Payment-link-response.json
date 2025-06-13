@@ -1,0 +1,22 @@
+{
+  "title": "Payment link response",
+  "type": "object",
+  "x-tags": [
+    "link",
+    "payment"
+  ],
+  "properties": {
+    "url": {
+      "type": "string",
+      "description": "if whitelabeled the url will be a subdomain of your domain name"
+    },
+    "qr_code": {
+      "type": "string",
+      "description": "PNG base64 representing the QR code"
+    }
+  },
+  "required": [
+    "url",
+    "qr_code"
+  ]
+}

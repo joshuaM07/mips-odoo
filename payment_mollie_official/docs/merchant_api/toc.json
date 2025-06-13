@@ -1,0 +1,37 @@
+{
+  "items": [
+    {
+      "type": "divider",
+      "title": "HOW TO"
+    },
+    {
+      "type": "item",
+      "title": "Standalone payment requests",
+      "uri": "docs/Standalone-payment-requests.md"
+    },
+    {
+      "type": "item",
+      "title": "Claim a Tokenized payment request (ODRP, deposit, warranty, EBS, etc.)",
+      "uri": "docs/Claim_tokenized_payment_request.md"
+    },
+    {
+      "type": "item",
+      "title": "Get back a payment result (IMN callback)",
+      "uri": "docs/Get-back-a-payment-result-(IMN-callback).md"
+    },
+    {
+      "type": "item",
+      "title": "In-App Module Integration",
+      "uri": "docs/In-App-Module-Integration.md"
+    },
+    {
+      "type": "divider",
+      "title": "APIS"
+    },
+    {
+      "type": "item",
+      "title": "Merchant Endpoints",
+      "uri": "reference/Payment-Zones.json"
+    }
+  ]
+}

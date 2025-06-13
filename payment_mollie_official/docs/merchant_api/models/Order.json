@@ -1,0 +1,43 @@
+{
+  "title": "Order",
+  "type": "object",
+  "x-tags": [
+    "order"
+  ],
+  "properties": {
+    "id_order": {
+      "type": "string",
+      "description": "A unique ID of the merchant's order. This ID is important as it will be always used by MiPS to synchronize the status with the Merchant.",
+      "minLength": 5,
+      "maxLength": 25,
+      "pattern": "[A-Za-z0-9]",
+      "example": "INV5026"
+    },
+    "currency": {
+      "type": "string",
+      "enum": [
+        "EUR",
+        "MUR",
+        "ZAR",
+        "GBP",
+        "USD"
+      ],
+      "example": "MUR",
+      "minLength": 3,
+      "maxLength": 3,
+      "pattern": "[A-Z]",
+      "description": "Not require for refund, because the refund will always be done in the same currency that order has been processed"
+    },
+    "amount": {
+      "type": "number",
+      "example": 10.25,
+      "minimum": 1,
+      "description": "Amount is also use for refund amount with instruction equal to 'refund_order'"
+    }
+  },
+  "required": [
+    "id_order",
+    "currency",
+    "amount"
+  ]
+}

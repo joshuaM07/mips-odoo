@@ -1,0 +1,14 @@
+{
+  "title": "Digital payer",
+  "type": "object",
+  "properties": {
+    "id_payer": {
+      "type": "string",
+      "description": "Same as inserted"
+    },
+    "qr_code": {
+      "type": "string",
+      "description": "Base64 QR code reprensenting the payer.\n\nthe QR code contains a link for payment.\n\nThe QR code may be directly used by the payer to initiate a payment."
+    }
+  }
+}

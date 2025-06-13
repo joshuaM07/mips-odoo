@@ -1,0 +1,51 @@
+{
+  "title": "Authentify",
+  "type": "object",
+  "x-tags": [
+    "authentify"
+  ],
+  "properties": {
+    "id_merchant": {
+      "type": "string",
+      "description": "Provided by MiPS. id_merchant is the unique ID to identify the merchant.",
+      "minLength": 32,
+      "maxLength": 32,
+      "pattern": "[A-Za-z0-9]",
+      "example": "q7r79YV13XjisGDnGgRw7pVMGSagfRzx",
+      "writeOnly": true
+    },
+    "id_entity": {
+      "type": "string",
+      "description": "Provided by MiPS. The id entity represents a sub administrative virtual representation of the merchant. It can be a shop, a department, a trade mark or an company of a bigger group, etc. At least if a merchant has only one entity, the id_entity will be a one and only data.",
+      "example": "Dem1091uOLSIVQPnLYuVTtmkfGppLo0t",
+      "pattern": "[A-Za-z0-9]",
+      "minLength": 32,
+      "maxLength": 32,
+      "writeOnly": true
+    },
+    "id_operator": {
+      "type": "string",
+      "description": "Provided by MiPS. id_operator is the unique id of a user.",
+      "example": "w8kvu7ShJrbRnVy54CjGpakWGj6H5zJy",
+      "pattern": "[A-Za-z0-9]",
+      "minLength": 32,
+      "maxLength": 32,
+      "writeOnly": true
+    },
+    "operator_password": {
+      "type": "string",
+      "description": "Provided by MiPS. Together with id_operator, this are the merchant's credentials",
+      "pattern": "[A-Za-z0-9]",
+      "minLength": 32,
+      "maxLength": 32,
+      "example": "G2JvCxTo2LJpZC3a9zNN9LlCdzjwf9X0",
+      "writeOnly": true
+    }
+  },
+  "required": [
+    "id_merchant",
+    "id_entity",
+    "id_operator",
+    "operator_password"
+  ]
+}

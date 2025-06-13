@@ -1,0 +1,854 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Merchant Endpoints",
+    "version": "2.7",
+    "summary": "Loads the MiPS Payment zone within your environment through an iFrame.",
+    "description": "Loads the MiPS Payment zone within your environment through an iFrame."
+  },
+  "servers": [
+    {
+      "url": "https://api.mips.mu/api/",
+      "description": "MiPS API server"
+    }
+  ],
+  "paths": {
+    "/create_payment_request": {
+      "post": {
+        "summary": "Create payment request",
+        "responses": {
+          "200": {
+            "description": "MiPS automatically generates a link where the payment or capture zone will be hosted. MiPS sends back the URL and a QRCode embedding the payment link.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "operation_status": {
+                      "type": "string",
+                      "enum": [
+                        "success",
+                        "fail"
+                      ]
+                    },
+                    "operation_details": {
+                      "type": "string"
+                    },
+                    "payment_link": {
+                      "$ref": "../models/Payment-link-response.json"
+                    }
+                  },
+                  "required": [
+                    "payment_link"
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "operationId": "create_payment_request",
+        "description": "The merchant gets a link where a client can Tokenize his means of payments. Optionally the client can also pay something at this time.\n\nThis API is typically useful for merchants who want to take an initial payment (deposit, warranty, fees, initial order, etc.) and then, afterwards, trigger other payments without having to ask again the means of payment used to his client.\n\nImportant, the maximum frequency and amounts allowed are fixed at upfront and must be according to the General Conditions provided to MiPS.\n\nThe merchant can decide to just get the link or to have MiPS send the link through mail on his behalf.\n\nThe mail design template is made through the Merchant MiPS back office.\n\nThe link in any case is sent back under an URL format + under a QR code in base 64 Format\n\nIMPORTANT: When a payment is successful for a generated payment request. MiPS will send a callback to the merchant. Please see IMN (Instant Merchant Notification callback).",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "example": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/60.0.3112.78 Safari/537.36"
+            },
+            "in": "header",
+            "name": "user-agent",
+            "description": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/60.0.3112.78 Safari/537.36",
+            "required": true
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "header",
+            "name": "Content-Type",
+            "description": "application/json",
+            "required": true
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "authentify": {
+                    "$ref": "../models/Authentify.json"
+                  },
+                  "request": {
+                    "$ref": "../models/Payment-link-generation.json"
+                  },
+                  "initial_payment": {
+                    "$ref": "../models/Order.json"
+                  },
+                  "iframe_behavior": {
+                    "type": [
+                      "object"
+                    ],
+                    "x-stoplight": {
+                      "id": "q074kilpwmza6"
+                    },
+                    "properties": {
+                      "custom_redirection_url": {
+                        "type": "string",
+                        "x-stoplight": {
+                          "id": "caqms463rwq3d"
+                        },
+                        "description": "Should be added with prefix 'http' or 'https'"
+                      }
+                    }
+                  }
+                },
+                "required": [
+                  "authentify",
+                  "request"
+                ]
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "Basic auth credentials": []
+          }
+        ]
+      },
+      "parameters": []
+    },
+    "/claim_payment_request": {
+      "post": {
+        "summary": "Claim payment request",
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "payment_status": {
+                      "type": "string",
+                      "enum": [
+                        "SUCCESS",
+                        "FAIL",
+                        "ERROR",
+                        "Rejected"
+                      ],
+                      "example": "Rejected"
+                    },
+                    "Reason": {
+                      "type": "string",
+                      "enum": [
+                        "APPROVED",
+                        "DECLINED",
+                        "INSUFFICIENT_FUNDS",
+                        "BLOCKED",
+                        "Claim Amount is greater that the specified Amount Claimable",
+                        "You have already reached Maximum number of cliams for this month.",
+                        "Maximum date for claims reached.",
+                        "You have reached the Maximum Amount Claimable"
+                      ],
+                      "example": "APPROVED"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "operationId": "claim_payment_request",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "authentify": {
+                    "$ref": "../models/Authentify.json"
+                  },
+                  "order": {
+                    "$ref": "../models/Order.json"
+                  },
+                  "id_token": {
+                    "type": "string",
+                    "minLength": 128,
+                    "maxLength": 128
+                  },
+                  "balance_number": {
+                    "type": "number",
+                    "description": "To use only for balance manual claim\nrefer to initial balances number"
+                  }
+                },
+                "required": [
+                  "authentify",
+                  "id_token"
+                ]
+              }
+            }
+          },
+          "description": "if \"deposit\" was selected, \"order\" must be empty and \"balance_number\" triggered"
+        },
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "example": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/60.0.3112.78 Safari/537.36"
+            },
+            "in": "header",
+            "name": "user-agent",
+            "description": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/60.0.3112.78 Safari/537.36",
+            "required": true
+          },
+          {
+            "schema": {
+              "type": "array"
+            },
+            "in": "header",
+            "name": "Content-Type",
+            "description": "application/json",
+            "required": true
+          }
+        ],
+        "description": "When a means of payment has been tokenized (memorized), The merchant can claim the payments.\n\nThe amounts and frequencies of claimed payments must remain within the specified \"max\" sent in \"load_iframe' API or \"create_payment_request\" API.",
+        "security": [
+          {
+            "Basic auth credentials": []
+          }
+        ]
+      }
+    },
+    "/cancel_odrp_token": {
+      "post": {
+        "summary": "Cancel ODRP Token",
+        "operationId": "post-clear_payment_request_token",
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "operation_status": {
+                      "type": "string"
+                    },
+                    "description": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "description": "Endpoint to be used to clear a payment request token for the odrp mode",
+        "security": [
+          {
+            "Basic auth credentials": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "header",
+            "name": "user-agent",
+            "description": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/60.0.3112.78 Safari/537.36",
+            "required": true
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "header",
+            "name": "Content-Type",
+            "description": "application/json",
+            "required": true
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "authentify": {
+                    "$ref": "../models/Authentify.json"
+                  },
+                  "id_token": {
+                    "type": "string"
+                  },
+                  "card_last_four_digit": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "authentify",
+                  "id_token",
+                  "card_last_four_digit"
+                ]
+              }
+            }
+          }
+        }
+      },
+      "parameters": []
+    },
+    "/load_payment_zone": {
+      "post": {
+        "summary": "Load Payment Zone",
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "../models/iFrame-result.json"
+                }
+              },
+              "text/html": {
+                "schema": {
+                  "type": "object",
+                  "properties": {}
+                }
+              },
+              "application/xml": {
+                "schema": {
+                  "type": "object",
+                  "properties": {}
+                }
+              },
+              "multipart/form-data": {
+                "schema": {
+                  "type": "object",
+                  "properties": {}
+                }
+              },
+              "application/EDIFACT": {
+                "schema": {
+                  "type": "object",
+                  "properties": {}
+                }
+              },
+              "text/plain": {
+                "schema": {
+                  "type": "object",
+                  "properties": {}
+                }
+              }
+            },
+            "headers": {}
+          }
+        },
+        "operationId": "load-payment-zone",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "authentify",
+                  "order",
+                  "request_mode",
+                  "touchpoint"
+                ],
+                "properties": {
+                  "authentify": {
+                    "$ref": "../models/Authentify.json"
+                  },
+                  "order": {
+                    "$ref": "../models/Order.json"
+                  },
+                  "iframe_behavior": {
+                    "$ref": "../models/iFrame-behavior.json"
+                  },
+                  "request_mode": {
+                    "type": "string",
+                    "enum": [
+                      "simple",
+                      "odrp",
+                      "membership"
+                    ],
+                    "description": "If simple the payment request is made for a one shot payment only.\n\nIf \"membership\", the parameters inside membership is mandatory. All payment will be manage on our side and it will automatically go through as configured with the parameters.\n\nIf \"odrp\" (On Demand Recurring Payment), the client will be informed on the generated payment page that, over and above the order he is paying for, the merchant reserves the right to take any payment within the specified limits, according to his general conditions. The means of payment will be tokenized. The merchant can claim a payment either through the MiPS back office, either through the claim_odrp API. Typical usage: any merchant who wants to have a better liberty on how to leverage his clients himself. The parameters inside odrp is mandatory for this request_mode."
+                  },
+                  "touchpoint": {
+                    "type": "string",
+                    "enum": [
+                      "native_app",
+                      "web"
+                    ]
+                  },
+                  "odrp": {
+                    "type": "object",
+                    "properties": {
+                      "max_amount_total": {
+                        "type": "number",
+                        "description": "Optional.\n\nThis is displayed to the client according with wordings relative to the request_mode.\n\nIn odrp mode, this is the max cumulated amount claimable before the max_date.\n\nFor odrp mode, you can let this field emptyt if you don't need a maximum amount."
+                      },
+                      "max_amount_per_claim": {
+                        "type": "number",
+                        "description": "Optional.\n\nThis is displayed to the client according with wordings relative to the request_mode.\n\nIn odrp mode, this is the max amount claimable at each claim."
+                      },
+                      "max_frequency": {
+                        "type": "integer",
+                        "description": "Optional.\n\nThis is displayed to the client according with wordings relative to the request_mode.\n\nIn odrp mode, this is the max number of claims per month."
+                      },
+                      "max_date": {
+                        "type": "string",
+                        "format": "date",
+                        "description": "Optional.\n\nThis is displayed to the client according with wordings relative to the request_mode.\n\nIn odrp mode, this is the max date after which no claim will be available. The Token will be deleted as from this date."
+                      }
+                    }
+                  },
+                  "membership": {
+                    "type": "object",
+                    "properties": {
+                      "interval": {
+                        "type": "number",
+                        "description": "Every INTERVAL month, day etc.",
+                        "multipleOf": 1,
+                        "example": 1,
+                        "minimum": 0
+                      },
+                      "start_date": {
+                        "type": "string",
+                        "format": "date"
+                      },
+                      "frequency": {
+                        "type": "string",
+                        "maxLength": 8,
+                        "enum": [
+                          "day",
+                          "week",
+                          "month",
+                          "year"
+                        ],
+                        "example": "month"
+                      },
+                      "end_date": {
+                        "type": "string",
+                        "format": "date"
+                      },
+                      "day_to_process": {
+                        "type": "number",
+                        "minimum": 1,
+                        "maximum": 28,
+                        "example": 5,
+                        "multipleOf": 1
+                      },
+                      "membership_amount": {
+                        "type": "number",
+                        "example": 1240.05
+                      }
+                    }
+                  },
+                  "additional_params": {
+                    "type": "array",
+                    "description": "The merchant puts here any parameter he wants to get back when a payment is sucessful. The values will be sent back through the IMN callback exactly as it was put in. Typically the merchant wants to insert here some tracking IDs.\n\nImportant, the only tracking ID MiPS will use is the id_order above",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "param_name": {
+                          "type": "string"
+                        },
+                        "param_value": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "description": ""
+        },
+        "x-internal": false,
+        "description": "This API call gives back a HTML code, generating the iframe. It allows the merchant to output an HTML payment zone within an iframe.\n\nImportant: The result of this API call is NOT a Token nor a payment result. The Token or the payment result will be sent to the IMN URL given by the merchant only when a tokenization or payment is successful.\n\nThe look & feel of the iFrame is automatically generated.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "example": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/60.0.3112.78 Safari/537.36"
+            },
+            "in": "header",
+            "name": "user-agent",
+            "description": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/60.0.3112.78 Safari/537.36",
+            "required": true
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "header",
+            "name": "Content-Type",
+            "description": "application/json",
+            "required": true
+          }
+        ],
+        "security": [
+          {
+            "Basic auth credentials": []
+          }
+        ]
+      },
+      "parameters": []
+    },
+    "/register_payer": {
+      "post": {
+        "summary": "Register Payer",
+        "tags": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "digital_payer": {
+                      "$ref": "../models/Digital.json"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "operationId": "post-register_payer",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "authentify": {
+                    "$ref": "../models/Authentify.json"
+                  },
+                  "payer": {
+                    "$ref": "../models/Payer.json"
+                  }
+                }
+              }
+            }
+          },
+          "description": ""
+        },
+        "description": "Usefull for Billers who want to participate to the Bill Presentment programm of MiPS with the Financial Institutions.\n\nThe bills can be pushed automatically by MiPS to Financial Institutions. with the Endpoint :  Create Payment Request",
+        "security": [
+          {
+            "Basic auth credentials": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "header",
+            "name": "Content-Type",
+            "description": "application/json",
+            "required": true
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "header",
+            "name": "user-agent",
+            "description": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/60.0.3112.78 Safari/537.36",
+            "required": true
+          }
+        ]
+      }
+    },
+    "/orders_management": {
+      "post": {
+        "summary": "Order Management",
+        "tags": [],
+        "responses": {
+          "200": {
+            "description": "The response is a array containing one (1) or many orders.\n\nMany orders are only sent for get_order_list",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "orders": {
+                      "type": "array",
+                      "description": "Only relevant data will be sent back depending on the \"instruction\" parameter sent in the query.\n\nExample: if the instruction apram = get_order_link, only the link data will be populated.\n\nTo get **all** the data of an order, use the instruction \"get_order_all_data\"\n\n",
+                      "items": {
+                        "$ref": "../models/Order-details.json"
+                      }
+                    },
+                    "operation_status": {
+                      "type": "string",
+                      "enum": [
+                        "success",
+                        "fail"
+                      ]
+                    },
+                    "operation_details": {
+                      "type": "string",
+                      "description": "Details if operation_status is failed"
+                    }
+                  },
+                  "required": [
+                    "operation_status"
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "operationId": "orders_management",
+        "description": "the merchant interacts here with his previously generated orders",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "example": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/60.0.3112.78 Safari/537.36"
+            },
+            "in": "header",
+            "name": "user-agent",
+            "description": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/60.0.3112.78 Safari/537.36",
+            "required": true
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "header",
+            "name": "Content-Type",
+            "description": "application/json",
+            "required": true
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "authentify": {
+                    "$ref": "../models/Authentify.json"
+                  },
+                  "instruction": {
+                    "type": "string",
+                    "enum": [
+                      "cancel_order",
+                      "refund_order",
+                      "get_order_list",
+                      "get_order_link",
+                      "get_order_all_data",
+                      "get_order_qr",
+                      "resend_order_by_email",
+                      "resend_order_by_sms",
+                      "get_next_payment_date"
+                    ],
+                    "example": "cancel_order"
+                  },
+                  "order": {
+                    "$ref": "../models/Order.json"
+                  },
+                  "description": {
+                    "type": "string",
+                    "description": "Can be use to add a reason to the refund or a reason for an order cancellation"
+                  },
+                  "search_param": {
+                    "type": "object",
+                    "description": "This param is compolsury for instruction = get_order_list.\n\nPlease note that this parameter has not yet been implemented.",
+                    "properties": {
+                      "last_payment_status": {
+                        "type": "string",
+                        "enum": [
+                          "success",
+                          "fail",
+                          "error"
+                        ]
+                      },
+                      "client_order_number": {
+                        "type": "string"
+                      },
+                      "from_date": {
+                        "type": "string",
+                        "format": "date-time",
+                        "default": "yyyy-mm-dd H:i:s",
+                        "example": "2022-03-12 10:48:28"
+                      },
+                      "to_date": {
+                        "type": "string",
+                        "format": "date-time",
+                        "default": "yyyy-mm-dd H:i:s",
+                        "example": "2022-03-12 10:48:28"
+                      },
+                      "order_amount": {
+                        "type": "number"
+                      },
+                      "order_currency": {
+                        "type": "string"
+                      }
+                    }
+                  }
+                },
+                "required": [
+                  "authentify",
+                  "instruction"
+                ]
+              }
+            }
+          },
+          "description": "id_order is compolsury for all instructions related to an specific order. Example, get_order_list does not require an id_order."
+        },
+        "security": [
+          {
+            "Basic auth credentials": []
+          }
+        ]
+      }
+    },
+    "/decrypt_imn_data": {
+      "post": {
+        "summary": "Decrypt IMN Callback data",
+        "responses": {
+          "200": {
+            "description": "This is received by the merchant after decrypting the crypted Instant Merchant notification callback.\n\nThis answer contains all needed data for the merchant to update his databases and process the operations after a successful payment (send invoices, updates orders, etc.)\n\nDepending on the type of payment needed (one off, membership, odrp, etc.) the answer contains the relevant datas.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "../models/IMN-decrypted-callback.json"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "decrypt-imn-data",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "authentify": {
+                    "$ref": "../models/Authentify.json"
+                  },
+                  "salt": {
+                    "type": "string",
+                    "description": "Provided by MiPS"
+                  },
+                  "cipher_key": {
+                    "type": "string",
+                    "description": "Provided by MiPS"
+                  },
+                  "received_crypted_data": {
+                    "type": "string",
+                    "description": "The crypted data received through the IMN CALLBACK"
+                  }
+                },
+                "required": [
+                  "authentify",
+                  "salt",
+                  "cipher_key",
+                  "received_crypted_data"
+                ]
+              }
+            }
+          },
+          "description": ""
+        },
+        "x-internal": false,
+        "description": "This API is to be called when the merchant receives an IMN Callback.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "example": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/60.0.3112.78 Safari/537.36"
+            },
+            "in": "header",
+            "name": "user-agent",
+            "description": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/60.0.3112.78 Safari/537.36",
+            "required": true
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "header",
+            "name": "Content-Type",
+            "description": "application/json",
+            "required": true
+          }
+        ],
+        "security": [
+          {
+            "Basic auth credentials": []
+          }
+        ]
+      },
+      "parameters": []
+    },
+    "/IMN_CALLBACK_ARCH": {
+      "post": {
+        "summary": "IMN CALLBACK ARCHITECTURE",
+        "responses": {
+          "200": {
+            "description": "This response is awaited from MiPS to check if the Instant Merchant Notification has successfully reached the merchant.\n\nThe IMN is sent by MiPS to the merchant upon successfull payments.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "string",
+                  "enum": [
+                    "success",
+                    "fail"
+                  ],
+                  "example": "success"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "IMN_CALLBACK",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "crypted_callback": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "crypted_callback"
+                ]
+              },
+              "examples": {
+                "Example 1": {
+                  "value": "crypted_callback=STRING&id_order=STRING"
+                }
+              }
+            }
+          },
+          "description": "MiPS sends you a HTTP request upon a successful payment"
+        },
+        "parameters": [],
+        "description": "**IMPORTANT: THIS IS AN URL TO BE HOSTED ON MERCHANT'S SIDE.**\n\n**IMPORTANT, THIS URL MUST BE EXPOSED TO THE WEB. Typically, http://localhost/ are not valid**\n\nAn URL defined upfront and hosted on Merchants side. \n\nthis URL is triggered by MiPS ONLY WHEN A SUCCESSFUL PAYMENT IS MADE\n\nYour IMN URL will be asked by MiPS Team on account opening."
+      },
+      "parameters": []
+    }
+  },
+  "components": {
+    "schemas": {},
+    "securitySchemes": {
+      "Basic auth credentials": {
+        "type": "http",
+        "scheme": "basic",
+        "description": "Provided by MiPS. First level of credentials is Basic Auth"
+      }
+    }
+  }
+}

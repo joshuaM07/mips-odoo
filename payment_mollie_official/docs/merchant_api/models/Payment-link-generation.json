@@ -1,0 +1,231 @@
+{
+  "title": "Payment request link or QR code generation",
+  "type": "object",
+  "properties": {
+    "request_mode": {
+      "type": "string",
+      "enum": [
+        "simple",
+        "deposit",
+        "odrp",
+        "membership",
+        "bill_presentment"
+      ],
+      "example": "simple",
+      "maxLength": 8,
+      "default": "simple",
+      "description": "If simple the payment request is made for a one shot payment only\n\nif \"odrp\" (On Request Recurring Payment), the client will be informed on the generated payment page that, over and above the order he is paying for, the merchant reserves the right to take any payment within the specified limits, according to his general conditions. The means of payment will be tokenized. The merchant can claim a payment either through the MiPS back office, either through the claim_odrp API. Typical usage: any merchant who wants to have a better liberty on how to leverage his clients himself.\n\nodrp is subject to max_ variables below.\n\ninitial_payment is compulsury for \"simple\" mode"
+    },
+    "options": {
+      "type": "string",
+      "enum": [
+        "warranty",
+        "extras"
+      ],
+      "description": "If \"warranty\", the client will be informed on the generated payment page that, over and above the order he is paying for, the merchant reserves the right to take another one shot according to his general conditions. The means of payment will be tokenized. The merchant can claim his warranty either through the MiPS back office, either through the claim_warranty API. Typical usage: a hotel or a car rental company who wants to take an unpaid bill after client has left.\n\nIf \"ebs\" (Extras Billing System), the client will be informed on the generated payment page that, over and above the order he is paying for, the merchant reserves the right to take as many payments as needed. The means of payment will be tokenized. The merchant can claim an Extras either through the MiPS back office, either through the claim_ebs API. Typical usage: a hotel or a car rental company who wants to take automated daily payments on the primary means of payment of his client.\n\nwarranty ebs and odrp are subject to max_ variables below."
+    },
+    "sending_mode": {
+      "type": "string",
+      "enum": [
+        "mail",
+        "link",
+        "sms",
+        "noaction"
+      ],
+      "example": "mail",
+      "default": "link",
+      "description": "If \"link\", MiPS will only create the payment link and QR code and revert them back to the merchant. The payment base url can be whitelabeled upfront to the merchants brand\n\nIf \"mail\", same as \"link\" + MiPS automatically sends the payment link through an email to the client. The payment page, sender email can be whitelabeled upfront to the merchants brand.\n\nIf \"sms\", same as \"link\" + MiPS automatically sends the payment link by SMS to the client.\n\nIf 'noaction', no email/sms will be sent after creation of the payment request and no confirmation/fail notification email will be send by our system."
+    },
+    "request_title": {
+      "type": "string",
+      "description": "The title the merchant wants to show to the client on the payment page or the automatic email sent. If null, the order id will be populated.",
+      "example": "Your stay in our hotel",
+      "minLength": 0,
+      "maxLength": 200
+    },
+    "exp_date": {
+      "type": "string",
+      "format": "date",
+      "description": "If given, the payment request to the client will be automatically cancelled upon this date early morning. If not the payment request will remain active until payment or cancelation "
+    },
+    "client_details": {
+      "type": "object",
+      "properties": {
+        "first_name": {
+          "type": "string",
+          "example": "John",
+          "minLength": 0,
+          "maxLength": 50,
+          "description": "The client's firstname. Compulsary for \"mail\" mode"
+        },
+        "last_name": {
+          "type": "string",
+          "example": "Smith",
+          "minLength": 0,
+          "maxLength": 50,
+          "description": "The client's last name. Compulsary for \"mail\" mode"
+        },
+        "client_email": {
+          "type": "string",
+          "format": "email",
+          "minLength": 0,
+          "maxLength": 50,
+          "example": "johnsmith@gmail.com",
+          "description": "Compulsury for \"mail\" mode. It is the client's email MiPS will send the mail to."
+        },
+        "phone_number": {
+          "type": "string",
+          "description": "Compulsory for 'sms' sending_mode. It is the SMS on which MiPS will send the payment information."
+        }
+      }
+    },
+    "client_other_data": {
+      "type": "array",
+      "uniqueItems": true,
+      "minItems": 0,
+      "description": "Any additional data configured within quickpay for the client called by data_short_id. These fields must have been configured upfront within MiPS Back office by the merchant.",
+      "items": {
+        "type": "object",
+        "properties": {
+          "other_data_short_id": {
+            "type": "string",
+            "example": "color_of_eyes"
+          },
+          "other_data_value": {
+            "type": "string",
+            "example": "brown"
+          }
+        }
+      }
+    },
+    "order_other_data": {
+      "type": "array",
+      "uniqueItems": true,
+      "minItems": 0,
+      "description": "Any additional data configured within quickpay for the order called by data_short_id. These fields must have been configured upfront within MiPS Back office by the merchant.",
+      "items": {
+        "type": "object",
+        "properties": {
+          "other_data_short_id": {
+            "type": "string",
+            "example": "color_of_car"
+          },
+          "other_data_value": {
+            "type": "string",
+            "example": "green"
+          }
+        }
+      }
+    },
+    "max_amount_total": {
+      "type": "number",
+      "description": "Optional.\n\nThis is displayed to the client according with wordings relative to the request_mode.\n\nIn warranty mode: A claim can't be more than this amount.\n\nIn ebs and odrp mode, this is the max cumulated amount claimable before the max_date.\n\nFor odrp mode, you can let this field emptyt if you don't need a maximum amount.",
+      "minimum": 0
+    },
+    "max_amount_per_claim": {
+      "type": "number",
+      "description": "Optional.\n\nThis is displayed to the client according with wordings relative to the request_mode.\n\nIn warranty mode leave null\n\nIn ebs and odrp mode, this is the max amount claimable at each claim."
+    },
+    "max_frequency": {
+      "type": "integer",
+      "description": "Optional.\n\nThis is displayed to the client according with wordings relative to the request_mode.\n\nIn warranty mode leave null\n\nIn ebs and odrp mode, this is the max number of claims per month."
+    },
+    "max_date": {
+      "type": "string",
+      "format": "date",
+      "description": "Optional.\n\nThis is displayed to the client according with wordings relative to the request_mode.\n\nIn warranty, ebs and odrp mode, this is the max date after which no claim will be available. The Token will be deleted as from this date."
+    },
+    "deposit_amount": {
+      "type": "string",
+      "description": "Optional.\n\nOnly required if \"deposit\" mode is activated. It represents the initial amount that will be debited at the payment stage.",
+      "example": "150.25"
+    },
+    "balance_pattern": {
+      "type": "array",
+      "description": "Represents all the balances the merchant wants to take within an array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "balance_number": {
+            "type": "number",
+            "description": "Amount of the balance",
+            "minimum": 1,
+            "example": 5,
+            "multipleOf": 1
+          },
+          "balance_mode": {
+            "type": "string",
+            "enum": [
+              "auto",
+              "manual"
+            ],
+            "example": "auto",
+            "description": "Balance will be taken automatically at a given date or manually by the Claim Payment API or through the MiPS back office by the merchant's operator."
+          },
+          "condition": {
+            "type": "string",
+            "description": "DATE/Textual condition. If \"auto\" mode selected, a date is compulsary. If manual mode is selected, a textual condition is compulsury.",
+            "example": "\"Upon request\" or \"2022-05-25\""
+          }
+        }
+      }
+    },
+    "membership": {
+      "type": "object",
+      "properties": {
+        "interval": {
+          "type": "number",
+          "minimum": 1,
+          "multipleOf": 1,
+          "description": "Every INTERVAL month, day etc.",
+          "example": 1
+        },
+        "frequency": {
+          "type": "string",
+          "enum": [
+            "day",
+            "week",
+            "month",
+            "year"
+          ],
+          "example": "monthly",
+          "maxLength": 8
+        },
+        "start_date": {
+          "type": "string",
+          "format": "date",
+          "example": "2022-03-18",
+          "minLength": 10,
+          "maxLength": 10
+        },
+        "end_date": {
+          "type": "string",
+          "format": "date",
+          "example": "2022-03-18",
+          "minLength": 10,
+          "maxLength": 10
+        },
+        "day_to_process": {
+          "type": "number",
+          "description": "Day of month from 1 to 28 If 28 selected, payment date will be last day of the month",
+          "minimum": 1,
+          "maximum": 28,
+          "multipleOf": 1,
+          "example": 5
+        },
+        "membership_amount": {
+          "type": "number",
+          "description": "Amount that will be automatically debited on the card each recurring interval"
+        }
+      }
+    },
+    "client_account_number": {
+      "type": "string",
+      "description": "Only requires if mode = \"bill_presentment\""
+    }
+  },
+  "required": [
+    "request_mode",
+    "sending_mode"
+  ]
+}
